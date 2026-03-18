@@ -5,11 +5,8 @@ https://github.com/user-attachments/assets/9e11714e-71be-4547-9c2f-5a5e5d46dc7c
 # MiniLMS — React Native Expo Assignment
 
 A production-quality Mini Learning Management System (LMS) mobile app built with React Native Expo SDK 55.
-
-## Screenshots
-
-> Run the app and take screenshots of: Login, Course List, Course Detail, Bookmarks, Profile, WebView screens.
-
+## APK Link 
+https://drive.google.com/file/d/11VP9cjHif0OgdqH2QH59qiiRbhSb03_S/view?usp=sharing
 ## Tech Stack
 
 | Category | Technology |
