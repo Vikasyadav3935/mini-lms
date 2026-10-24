@@ -1,0 +1,80 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, ccr-d0d0a502-j4eskg]
+
+env:
+  GODOT_VERSION: "4.3"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Godot downloads
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-bin
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: Install Godot and export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          base=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
+          mkdir -p ~/godot-bin ~/.local/share/godot/export_templates
+          wget -q $base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip -O /tmp/godot.zip
+          wget -q $base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz -O /tmp/templates.zip
+          unzip -q /tmp/godot.zip -d ~/godot-bin
+          unzip -q /tmp/templates.zip -d /tmp/templates
+          mv /tmp/templates/templates ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+
+      - name: Configure Android export
+        run: |
+          ln -sf ~/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+          keytool -genkeypair -v -keystore ~/debug.keystore -storepass android -alias androiddebugkey \
+            -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p ~/.config/godot
+          for f in editor_settings-4.tres editor_settings-${GODOT_VERSION}.tres; do
+            cat > ~/.config/godot/$f <<SETTINGS
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/debug_keystore = "$HOME/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          SETTINGS
+          done
+          sed -i 's/^          //' ~/.config/godot/*.tres
+
+      - name: Import project and check scripts
+        run: |
+          ~/godot-bin/godot --headless --import 2>&1 | tee import.log || true
+          # run the menu scene briefly; any script/parse error fails the build
+          ~/godot-bin/godot --headless --quit-after 60 2>&1 | tee run.log
+          if grep -E "SCRIPT ERROR|Parse Error|ERROR: Failed" import.log run.log; then
+            echo "::error::GDScript errors found"; exit 1
+          fi
+
+      - name: Export debug APK
+        run: |
+          mkdir -p build
+          ~/godot-bin/godot --headless --export-debug Android build/lan-arena.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lan-arena-apk
+          path: build/lan-arena.apk
