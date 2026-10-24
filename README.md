@@ -1,110 +1,24 @@
+# LAN Arena
 
+Offline LAN multiplayer top-down shooter for mobile, built with **Godot 4.3+**
+(GL Compatibility renderer, landscape). No internet or server needed — one phone
+hosts, the others on the same Wi-Fi join.
 
-https://github.com/user-attachments/assets/9e11714e-71be-4547-9c2f-5a5e5d46dc7c
+## How to play
+- Everyone connects to the same Wi-Fi (or one phone's hotspot).
+- One player taps **Host a game**; others see it under *Games on your Wi-Fi* and tap it
+  (or type the host IP shown in the lobby). Host taps **Start game**. Up to 6 players.
+- **Left half** of the screen: drag to move. **Right half**: drag to aim; push far to shoot.
+- First to 10 kills wins.
+- Desktop testing: WASD/arrows to move, Space to fire, mouse drag on the right half to aim.
 
-# MiniLMS — React Native Expo Assignment
+## Run / export
+1. Open the folder in Godot 4.3+ and press Play (run two instances via *Debug → Run Multiple Instances*;
+   LAN discovery needs separate machines, so on one PC join with `127.0.0.1`).
+2. Android: install the export templates, set up the Android SDK/JDK/keystore in Editor Settings,
+   then *Project → Export → Android* (preset included; INTERNET and Wi-Fi permissions enabled).
 
-A production-quality Mini Learning Management System (LMS) mobile app built with React Native Expo SDK 55.
-## APK Link 
-https://drive.google.com/file/d/11VP9cjHif0OgdqH2QH59qiiRbhSb03_S/view?usp=sharing
-## Tech Stack
-
-| Category | Technology |
-|----------|-----------|
-| Framework | React Native Expo SDK 55 |
-| Language | TypeScript (strict mode) |
-| Navigation | Expo Router v4 |
-| Styling | NativeWind v4 (Tailwind CSS) |
-| Secure Storage | Expo SecureStore |
-| App Storage | AsyncStorage |
-| Forms | React Hook Form + Zod |
-| Images | Expo Image (caching) |
-| Notifications | Expo Notifications |
-| Network | @react-native-community/netinfo |
-
-## Architecture
-
-```
-app/                    # Expo Router screens
-  (auth)/               # Login & Register (unauthenticated)
-  (tabs)/               # Main app (authenticated)
-  course/               # Course detail + WebView
-contexts/               # React Context for global state
-  AuthContext           # Authentication state + SecureStore
-  CourseContext         # Courses, bookmarks, enrollment + AsyncStorage
-  NetworkContext        # Network monitoring + notifications
-components/             # Reusable UI components
-lib/
-  api.ts                # HTTP client with retry logic + token refresh
-  storage.ts            # SecureStore + AsyncStorage abstractions
-  notifications.ts      # Expo Notifications helpers
-types/                  # TypeScript interfaces
-```
-
-## Key Architectural Decisions
-
-1. **SecureStore for tokens** — Access + refresh tokens stored in device's secure keychain, never in AsyncStorage
-2. **Automatic token refresh** — API client intercepts 401 responses and attempts token refresh before failing
-3. **Retry with backoff** — Failed requests retry up to 3 times with increasing delay
-4. **Context + Reducer** — CourseContext uses useReducer for predictable state transitions
-5. **Memoized renders** — CourseCard wrapped in React.memo; list callbacks use useCallback
-6. **WebView bidirectional** — Native injects course data via `injectedJavaScript`; WebView posts messages back via `window.ReactNativeWebView.postMessage`
-7. **Offline banner** — NetworkContext watches connectivity and surfaces an offline indicator
-8. **Inactivity reminder** — On app open, schedules a 24h notification if user was inactive; cancels it when they return
-
-## Setup
-
-### Prerequisites
-- Node.js 20+
-- Expo CLI (`npm install -g expo-cli`)
-- iOS Simulator or Android Emulator (or Expo Go app)
-
-### Installation
-
-```bash
-git clone <repo-url>
-cd mini-lms
-npm install
-npx expo start
-```
-
-### Environment Variables
-
-No `.env` required — API base URL is `https://api.freeapi.app` (public).
-
-### Build APK
-
-```bash
-# Install EAS CLI
-npm install -g eas-cli
-eas login
-
-# Build development APK
-eas build --platform android --profile development
-```
-
-## Features
-
-- **Authentication** — Login/Register with JWT tokens in SecureStore, auto-login on restart
-- **Course Catalog** — 20 courses from FreeAPI, with search and pull-to-refresh
-- **Course Details** — Full details, enroll with animation, bookmark toggle
-- **Bookmarks** — Persisted locally; notification fires when 5+ bookmarked
-- **WebView** — Embedded course content with bidirectional JS bridge
-- **Profile** — Avatar picker, stats, user info, logout
-- **Offline Mode** — Banner shown when disconnected; inactivity reminder notifications
-- **Error Handling** — Retry UI, error boundaries, WebView error fallback
-
-## API
-
-All data from `https://api.freeapi.app`:
-- `POST /api/v1/users/login` — Authentication
-- `POST /api/v1/users/register` — Registration
-- `GET /api/v1/users/current-user` — Profile
-- `GET /api/v1/public/randomproducts` — Course data
-- `GET /api/v1/public/randomusers` — Instructor data
-
-## Known Limitations
-
-- Profile picture update is local only (no upload endpoint available)
-- Course progress is simulated (no backend persistence)
-- Enrollment is local state only
+## Networking
+- ENet on UDP port 24680 for gameplay; each peer simulates its own player and streams state.
+- Host broadcasts a UDP beacon on port 24681 every second for discovery (`scripts/net.gd`).
+- Some routers/hotspots block client-to-client traffic ("AP isolation"); use the manual IP field or a phone hotspot.
